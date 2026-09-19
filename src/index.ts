@@ -1,4 +1,5 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent'
+import { Text } from '@earendil-works/pi-tui'
 import { Type, type Static } from 'typebox'
 import { askJev } from './jev.js'
 
@@ -19,9 +20,17 @@ const AskJevInputSchema = Type.Object({
 
 type AskJevInput = Static<typeof AskJevInputSchema>
 
+export function prettyPrint(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2)
+  } catch {
+    return String(value)
+  }
+}
+
 function toolResult(response: { model: string; answers: unknown; usage: unknown; id: string; provider: string }) {
   return {
-    content: [{ type: 'text' as const, text: JSON.stringify(response) }],
+    content: [{ type: 'text' as const, text: prettyPrint(response) }],
     details: response,
   }
 }
@@ -37,6 +46,29 @@ export default function pieJevExtension(pi: ExtensionAPI): void {
     async execute(_toolCallId, params: AskJevInput, signal) {
       const response = await askJev(params.state, params.questions, { signal })
       return toolResult(response)
+    },
+    renderCall(args, theme, context) {
+      if (!context.expanded) {
+        return new Text('', 0, 0)
+      }
+      return new Text(
+        `\n${theme.fg('accent', 'Prompt:')}\n${theme.fg('toolOutput', prettyPrint({ state: args.state, questions: args.questions }))}`,
+        0,
+        0,
+      )
+    },
+    renderResult(result, options, theme) {
+      if (!options.expanded) {
+        return new Text('', 0, 0)
+      }
+      const details = result.details as Record<string, unknown> | undefined
+      const body =
+        details !== undefined && typeof details === 'object'
+          ? prettyPrint(details)
+          : String(
+              (result.content as Array<{ type: string; text?: string }>).find(item => item.type === 'text')?.text ?? '',
+            )
+      return new Text(`\n${theme.fg('accent', 'Response:')}\n${theme.fg('toolOutput', body)}`, 0, 0)
     },
   })
 }

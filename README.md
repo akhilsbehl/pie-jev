@@ -34,6 +34,8 @@ Top-level Pi tool `ask_jev` takes exactly:
 
 It returns the successful JEV response object and delegates to `askJev` through one shared transport path. Failures throw a tool error.
 
+Both the tool content and the rendered views are pretty-printed JSON. When the tool row is collapsed, the prompt and response are fully hidden; expanding it reveals both — the call slot shows the `Prompt` (`state` + `questions`), the result slot shows the `Response`.
+
 Requires `OPENROUTER_API_KEY` in the environment.
 
 ## Development

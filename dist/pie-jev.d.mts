@@ -27,6 +27,7 @@ declare const DEFAULT_JEV_TIMEOUT_MS = 90000;
 declare function askJev(state: string, questions: Record<string, JevQuestion>, control?: JevRequestControl): Promise<JevResponse>;
 //#endregion
 //#region src/index.d.ts
+declare function prettyPrint(value: unknown): string;
 declare function pieJevExtension(pi: ExtensionAPI): void;
 //#endregion
-export { DEFAULT_JEV_TIMEOUT_MS, JEV_ENDPOINT, JEV_MODEL, type JevAnswer, type JevQuestion, type JevQuestionType, type JevRequestControl, type JevResponse, askJev, pieJevExtension as default };
+export { DEFAULT_JEV_TIMEOUT_MS, JEV_ENDPOINT, JEV_MODEL, type JevAnswer, type JevQuestion, type JevQuestionType, type JevRequestControl, type JevResponse, askJev, pieJevExtension as default, prettyPrint };

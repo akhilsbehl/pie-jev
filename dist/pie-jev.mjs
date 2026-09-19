@@ -1,3 +1,4 @@
+import { Text } from "@earendil-works/pi-tui";
 //#region node_modules/typebox/build/system/memory/metrics.mjs
 /** TypeBox instantiation metrics */
 const Metrics = {
@@ -3103,11 +3104,18 @@ const AskJevInputSchema = _Object_({
 	state: String$1({ minLength: 1 }),
 	questions: Record(String$1({ minLength: 1 }), JevQuestionSchema, { minProperties: 1 })
 });
+function prettyPrint(value) {
+	try {
+		return JSON.stringify(value, null, 2);
+	} catch {
+		return String(value);
+	}
+}
 function toolResult(response) {
 	return {
 		content: [{
 			type: "text",
-			text: JSON.stringify(response)
+			text: prettyPrint(response)
 		}],
 		details: response
 	};
@@ -3122,8 +3130,21 @@ function pieJevExtension(pi) {
 		parameters: AskJevInputSchema,
 		async execute(_toolCallId, params, signal) {
 			return toolResult(await askJev(params.state, params.questions, { signal }));
+		},
+		renderCall(args, theme, context) {
+			if (!context.expanded) return new Text("", 0, 0);
+			return new Text(`\n${theme.fg("accent", "Prompt:")}\n${theme.fg("toolOutput", prettyPrint({
+				state: args.state,
+				questions: args.questions
+			}))}`, 0, 0);
+		},
+		renderResult(result, options, theme) {
+			if (!options.expanded) return new Text("", 0, 0);
+			const details = result.details;
+			const body = details !== void 0 && typeof details === "object" ? prettyPrint(details) : String(result.content.find((item) => item.type === "text")?.text ?? "");
+			return new Text(`\n${theme.fg("accent", "Response:")}\n${theme.fg("toolOutput", body)}`, 0, 0);
 		}
 	});
 }
 //#endregion
-export { DEFAULT_JEV_TIMEOUT_MS, JEV_ENDPOINT, JEV_MODEL, askJev, pieJevExtension as default };
+export { DEFAULT_JEV_TIMEOUT_MS, JEV_ENDPOINT, JEV_MODEL, askJev, pieJevExtension as default, prettyPrint };
