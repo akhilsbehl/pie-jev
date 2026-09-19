@@ -9,13 +9,19 @@ export { DEFAULT_JEV_TIMEOUT_MS, JEV_ENDPOINT, JEV_MODEL } from './jev.js'
 
 const JevQuestionSchema = Type.Object({
   type: Type.Union([Type.Literal('noul'), Type.Literal('choice'), Type.Literal('score')]),
-  instructions: Type.String({ minLength: 1 }),
-  criteria: Type.Any(),
+  instructions: Type.String({ minLength: 1, description: 'What the model must evaluate for this question.' }),
+  criteria: Type.Any({
+    description:
+      "Per-type criteria. noul REQUIRES an object with 'true' and 'false' entries, e.g. {\"true\": \"Urgent\", \"false\": \"Not urgent\"}; any other shape fails. choice takes an object mapping each option name to its description. score takes an array of level labels.",
+  }),
 })
 
 const AskJevInputSchema = Type.Object({
-  state: Type.String({ minLength: 1 }),
-  questions: Type.Record(Type.String({ minLength: 1 }), JevQuestionSchema, { minProperties: 1 }),
+  state: Type.String({ minLength: 1, description: 'The full state/context string the model evaluates.' }),
+  questions: Type.Record(Type.String({ minLength: 1 }), JevQuestionSchema, {
+    minProperties: 1,
+    description: 'At least one named question to evaluate against the state.',
+  }),
 })
 
 type AskJevInput = Static<typeof AskJevInputSchema>
@@ -47,22 +53,34 @@ export default function pieJevExtension(pi: ExtensionAPI): void {
       const response = await askJev(params.state, params.questions, { signal })
       return toolResult(response)
     },
-    renderCall(args, theme) {
+    renderCall(args, theme, context) {
       const names = Object.keys(args.questions).join(', ')
-      return new Text(`${theme.fg('success', theme.bold('ask_jev'))}${theme.fg('muted', ` · ${names}`)}`, 0, 0)
+      const summary = `${theme.fg('success', theme.bold('ask_jev'))}${theme.fg('muted', ` · ${names}`)}`
+      if (!context.expanded) {
+        return new Text(summary, 0, 0)
+      }
+      return new Text(
+        `${summary}\n${theme.fg('success', 'Prompt:')}\n${theme.fg('success', prettyPrint({ state: args.state, questions: args.questions }))}`,
+        0,
+        0,
+      )
     },
-    renderResult(result, options, theme) {
+    renderResult(result, options, theme, context) {
       if (!options.expanded) {
         return new Text('', 0, 0)
       }
       const details = result.details as Record<string, unknown> | undefined
-      const body =
-        details !== undefined && typeof details === 'object'
-          ? prettyPrint(details)
-          : String(
-              (result.content as Array<{ type: string; text?: string }>).find(item => item.type === 'text')?.text ?? '',
-            )
-      return new Text(`\n${theme.fg('border', 'Response:')}\n${theme.fg('border', body)}`, 0, 0)
+      const textBody = String(
+        (result.content as Array<{ type: string; text?: string }>).find(item => item.type === 'text')?.text ?? '',
+      )
+      if (context.isError || details === undefined || (typeof details === 'object' && Object.keys(details).length === 0)) {
+        return new Text(`\n${theme.fg('error', textBody.trim() === '' ? 'Unknown error' : textBody)}`, 0, 0)
+      }
+      return new Text(
+        `\n${theme.fg('border', 'Response:')}\n${theme.fg('border', prettyPrint(details))}`,
+        0,
+        0,
+      )
     },
   })
 }

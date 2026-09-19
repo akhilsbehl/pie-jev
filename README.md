@@ -22,6 +22,8 @@ const response = await askJev(
 
 `askJev(state, questions, control?)` posts to `https://openrouter.ai/api/alpha/decisions` with `Content-Type: application/json` and `Authorization: Bearer $OPENROUTER_API_KEY`. The body contains only `model: "typesafe/jev-1.13"`, `state`, and `questions`. It returns `{ model, answers, usage, id, provider }`. Answer values are type-specific (`noul`, `choice`, or `score` fields — not a universal `answer` field). Answer metadata is preserved after validating the top-level object, named answer presence, and requested answer type.
 
+`noul` questions require criteria with `true` and `false` entries, e.g. `{ "true": "Urgent", "false": "Not urgent" }` — the API rejects any other shape with `400 invalid_union`, so `askJev` validates this locally and throws a descriptive error without calling the API. `choice` takes an object mapping option names to descriptions; `score` takes an array of level labels.
+
 The narrow third argument is cancellation/timeout control only (`signal`, `timeoutMs`). There are no model/provider/sampling controls. HTTP, timeout, cancellation, JSON, and response-shape failures throw.
 
 ## Pi tool
@@ -34,7 +36,7 @@ Top-level Pi tool `ask_jev` takes exactly:
 
 It returns the successful JEV response object and delegates to `askJev` through one shared transport path. Failures throw a tool error.
 
-The tool content is pretty-printed JSON. The call slot always shows a one-line summary (`ask_jev` plus question names) in theme green; the result slot stays hidden until expanded, then shows only the pretty-printed `Response` in theme blue.
+The tool content is pretty-printed JSON. The call slot always shows a one-line summary (`ask_jev` plus question names) in theme green, and expands to the full pretty-printed prompt (`state` + `questions`); the result slot stays hidden until expanded, then shows only the pretty-printed `Response` in theme blue. Tool failures render the error text in theme red instead of an empty object.
 
 Requires `OPENROUTER_API_KEY` in the environment.
 

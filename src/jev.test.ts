@@ -60,6 +60,18 @@ describe('askJev transport', () => {
     await expect(askJev('state', questions, { timeoutMs: 1000 })).rejects.toThrow('OPENROUTER_API_KEY')
   })
 
+  it.each([
+    [{ bad: { type: 'noul', instructions: 'Do it?', criteria: { action: 'yes', no_action: 'no' } } }],
+    [{ bad: { type: 'noul', instructions: 'Do it?', criteria: ['yes', 'no'] } }],
+    [{ bad: { type: 'noul', instructions: 'Do it?', criteria: { true: 'yes' } } }],
+    [{ bad: { type: 'noul', instructions: 'Do it?' } }],
+  ])('rejects invalid noul criteria locally without calling the API (%s)', async badQuestions => {
+    process.env['OPENROUTER_API_KEY'] = 'test-key'
+    const fetchMock = mockFetchOnce(async () => ({ ok: true, status: 200, json: async () => successBody }))
+    await expect(askJev('state', badQuestions as never, { timeoutMs: 1000 })).rejects.toThrow(/criteria/)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('throws on HTTP failure', async () => {
     process.env['OPENROUTER_API_KEY'] = 'test-key'
     mockFetchOnce(async () => ({ ok: false, status: 500, text: async () => 'bad' }))

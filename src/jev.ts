@@ -6,6 +6,16 @@ export type JevQuestion = {
   criteria: unknown
 }
 
+/**
+ * Criteria shape the JEV API requires for `noul` questions: an object with
+ * `true` and `false` entries describing each pole. Anything else is rejected
+ * by the API with `400 invalid_union`, so `askJev` validates this locally.
+ */
+export type JevNoulCriteria = {
+  true: unknown
+  false: unknown
+}
+
 export type JevRequestControl = {
   signal?: AbortSignal
   timeoutMs?: number
@@ -56,6 +66,14 @@ function validateQuestions(questions: Record<string, JevQuestion>): void {
     }
     if (!('criteria' in (question as Record<string, unknown>))) {
       throw new Error(`askJev question '${name}' requires criteria`)
+    }
+    if (question.type === 'noul') {
+      const criteria = (question as { criteria: unknown }).criteria
+      if (!isRecord(criteria) || !('true' in criteria) || !('false' in criteria)) {
+        throw new Error(
+          `askJev question '${name}' of type 'noul' requires criteria with 'true' and 'false' entries, e.g. { true: '...', false: '...' }; the JEV API rejects any other shape with 400 invalid_union`,
+        )
+      }
     }
   }
 }

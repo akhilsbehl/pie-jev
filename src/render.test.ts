@@ -50,14 +50,17 @@ describe('ask_jev rendering', () => {
     expect(prettyPrint({ a: 1 })).toBe('{\n  "a": 1\n}')
   })
 
-  it('shows a one-line summary in the call slot in both collapsed and expanded states', () => {
+  it('shows a one-line summary when collapsed and the full prompt when expanded', () => {
     const tool = registeredTool()
-    for (const expanded of [false, true]) {
-      const output = rendered(tool.renderCall(params, theme, { expanded }))
-      expect(output).toContain('ask_jev')
-      expect(output).toContain('is_urgent')
-      expect(output).not.toContain('Help! My payouts have been failing')
-    }
+    const collapsed = rendered(tool.renderCall(params, theme, { expanded: false }))
+    expect(collapsed).toContain('ask_jev')
+    expect(collapsed).toContain('is_urgent')
+    expect(collapsed).not.toContain('Help! My payouts have been failing')
+    const expanded = rendered(tool.renderCall(params, theme, { expanded: true }))
+    expect(expanded).toContain('ask_jev')
+    expect(expanded).toContain('Prompt:')
+    expect(expanded).toContain('Help! My payouts have been failing')
+    expect(expanded).toContain('"is_urgent"')
     expect(seenColors).toContain('success')
   })
 
@@ -72,6 +75,19 @@ describe('ask_jev rendering', () => {
     expect(expanded).not.toContain('Help! My payouts have been failing')
     expect(seenColors).toContain('border')
     expect(seenColors.every(color => !color.startsWith('#'))).toBe(true)
+  })
+
+  it('renders tool errors as error text instead of an empty response object', () => {
+    const tool = registeredTool()
+    const failure = {
+      content: [{ type: 'text', text: 'JEV request failed with status 400' }],
+      details: {},
+    }
+    expect(rendered(tool.renderResult(failure, { expanded: false }, theme, { isError: true })).trim()).toBe('')
+    const expanded = rendered(tool.renderResult(failure, { expanded: true }, theme, { isError: true }))
+    expect(expanded).toContain('JEV request failed with status 400')
+    expect(expanded).not.toContain('Response:')
+    expect(seenColors).toContain('error')
   })
 
   it('returns pretty-printed tool content from execute', async () => {

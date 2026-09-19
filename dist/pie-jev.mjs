@@ -3000,6 +3000,10 @@ function validateQuestions(questions) {
 		if (question.type !== "noul" && question.type !== "choice" && question.type !== "score") throw new Error(`askJev question '${name}' has invalid type`);
 		if (typeof question.instructions !== "string" || question.instructions.length === 0) throw new Error(`askJev question '${name}' requires non-empty instructions`);
 		if (!("criteria" in question)) throw new Error(`askJev question '${name}' requires criteria`);
+		if (question.type === "noul") {
+			const criteria = question.criteria;
+			if (!isRecord(criteria) || !("true" in criteria) || !("false" in criteria)) throw new Error(`askJev question '${name}' of type 'noul' requires criteria with 'true' and 'false' entries, e.g. { true: '...', false: '...' }; the JEV API rejects any other shape with 400 invalid_union`);
+		}
 	}
 }
 function validateResponse(value, questions) {
@@ -3097,12 +3101,21 @@ const JevQuestionSchema = _Object_({
 		Literal("choice"),
 		Literal("score")
 	]),
-	instructions: String$1({ minLength: 1 }),
-	criteria: Any()
+	instructions: String$1({
+		minLength: 1,
+		description: "What the model must evaluate for this question."
+	}),
+	criteria: Any({ description: "Per-type criteria. noul REQUIRES an object with 'true' and 'false' entries, e.g. {\"true\": \"Urgent\", \"false\": \"Not urgent\"}; any other shape fails. choice takes an object mapping each option name to its description. score takes an array of level labels." })
 });
 const AskJevInputSchema = _Object_({
-	state: String$1({ minLength: 1 }),
-	questions: Record(String$1({ minLength: 1 }), JevQuestionSchema, { minProperties: 1 })
+	state: String$1({
+		minLength: 1,
+		description: "The full state/context string the model evaluates."
+	}),
+	questions: Record(String$1({ minLength: 1 }), JevQuestionSchema, {
+		minProperties: 1,
+		description: "At least one named question to evaluate against the state."
+	})
 });
 function prettyPrint(value) {
 	try {
@@ -3131,15 +3144,21 @@ function pieJevExtension(pi) {
 		async execute(_toolCallId, params, signal) {
 			return toolResult(await askJev(params.state, params.questions, { signal }));
 		},
-		renderCall(args, theme) {
+		renderCall(args, theme, context) {
 			const names = Object.keys(args.questions).join(", ");
-			return new Text(`${theme.fg("success", theme.bold("ask_jev"))}${theme.fg("muted", ` · ${names}`)}`, 0, 0);
+			const summary = `${theme.fg("success", theme.bold("ask_jev"))}${theme.fg("muted", ` · ${names}`)}`;
+			if (!context.expanded) return new Text(summary, 0, 0);
+			return new Text(`${summary}\n${theme.fg("success", "Prompt:")}\n${theme.fg("success", prettyPrint({
+				state: args.state,
+				questions: args.questions
+			}))}`, 0, 0);
 		},
-		renderResult(result, options, theme) {
+		renderResult(result, options, theme, context) {
 			if (!options.expanded) return new Text("", 0, 0);
 			const details = result.details;
-			const body = details !== void 0 && typeof details === "object" ? prettyPrint(details) : String(result.content.find((item) => item.type === "text")?.text ?? "");
-			return new Text(`\n${theme.fg("border", "Response:")}\n${theme.fg("border", body)}`, 0, 0);
+			const textBody = String(result.content.find((item) => item.type === "text")?.text ?? "");
+			if (context.isError || details === void 0 || typeof details === "object" && Object.keys(details).length === 0) return new Text(`\n${theme.fg("error", textBody.trim() === "" ? "Unknown error" : textBody)}`, 0, 0);
+			return new Text(`\n${theme.fg("border", "Response:")}\n${theme.fg("border", prettyPrint(details))}`, 0, 0);
 		}
 	});
 }
