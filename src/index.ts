@@ -1,0 +1,42 @@
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent'
+import { Type, type Static } from 'typebox'
+import { askJev } from './jev.js'
+
+export { askJev } from './jev.js'
+export type { JevAnswer, JevQuestion, JevQuestionType, JevRequestControl, JevResponse } from './jev.js'
+export { DEFAULT_JEV_TIMEOUT_MS, JEV_ENDPOINT, JEV_MODEL } from './jev.js'
+
+const JevQuestionSchema = Type.Object({
+  type: Type.Union([Type.Literal('noul'), Type.Literal('choice'), Type.Literal('score')]),
+  instructions: Type.String({ minLength: 1 }),
+  criteria: Type.Any(),
+})
+
+const AskJevInputSchema = Type.Object({
+  state: Type.String({ minLength: 1 }),
+  questions: Type.Record(Type.String({ minLength: 1 }), JevQuestionSchema, { minProperties: 1 }),
+})
+
+type AskJevInput = Static<typeof AskJevInputSchema>
+
+function toolResult(response: { model: string; answers: unknown; usage: unknown; id: string; provider: string }) {
+  return {
+    content: [{ type: 'text' as const, text: JSON.stringify(response) }],
+    details: response,
+  }
+}
+
+export default function pieJevExtension(pi: ExtensionAPI): void {
+  pi.registerTool({
+    name: 'ask_jev',
+    label: 'Ask JEV',
+    description: 'Ask JEV (OpenRouter Decisions API) a structured state/questions evaluation. Requires explicit state and questions; do not invent them.',
+    promptSnippet: 'Ask JEV with explicit state and questions',
+    promptGuidelines: ['Use ask_jev when you have an explicit state string and structured questions to evaluate with JEV.'],
+    parameters: AskJevInputSchema,
+    async execute(_toolCallId, params: AskJevInput, signal) {
+      const response = await askJev(params.state, params.questions, { signal })
+      return toolResult(response)
+    },
+  })
+}

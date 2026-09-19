@@ -1,0 +1,74 @@
+{
+  "name": "pie-jev",
+  "version": "0.1.0",
+  "description": "Standalone JEV client library and Pi extension exposing askJev and ask_jev",
+  "keywords": [
+    "jev",
+    "openrouter",
+    "decisions",
+    "pi",
+    "pi-coding-agent",
+    "pi-extension",
+    "pi-package"
+  ],
+  "homepage": "https://github.com/akhilsbehl/pie-jev#readme",
+  "bugs": {
+    "url": "https://github.com/akhilsbehl/pie-jev/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Akhil Behl"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akhilsbehl/pie-jev.git"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/pie-jev.mjs",
+  "types": "./dist/pie-jev.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/pie-jev.d.mts",
+      "import": "./dist/pie-jev.mjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {
+    "typebox": "1.3.34"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "0.80.10",
+    "@earendil-works/pi-coding-agent": "0.80.10",
+    "@earendil-works/pi-tui": "0.80.10",
+    "@types/node": "26.1.1",
+    "tsdown": "0.22.13",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.80.10 || ^0.81.0"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "pi": {
+    "extensions": [
+      "./dist/pie-jev.mjs"
+    ]
+  },
+  "scripts": {
+    "build": "tsdown --clean && mv dist/index.mjs dist/pie-jev.mjs && mv dist/index.d.mts dist/pie-jev.d.mts && sed -i 's/[[:space:]]*$//' dist/pie-jev.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  }
+}
