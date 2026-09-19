@@ -27,7 +27,14 @@ function registeredTool() {
   return captured
 }
 
-const theme = { fg: (_color: string, text: string) => text }
+const seenColors: string[] = []
+const theme = {
+  fg: (color: string, text: string) => {
+    seenColors.push(color)
+    return text
+  },
+  bold: (text: string) => text,
+}
 
 function rendered(component: { render: (width: number) => string[] }): string {
   return component.render(120).join('\n')
@@ -43,14 +50,15 @@ describe('ask_jev rendering', () => {
     expect(prettyPrint({ a: 1 })).toBe('{\n  "a": 1\n}')
   })
 
-  it('hides the prompt when collapsed and shows it pretty-printed when expanded', () => {
+  it('shows a one-line summary in the call slot in both collapsed and expanded states', () => {
     const tool = registeredTool()
-    expect(rendered(tool.renderCall(params, theme, { expanded: false })).trim()).toBe('')
-    const expanded = rendered(tool.renderCall(params, theme, { expanded: true }))
-    expect(expanded).toContain('Prompt:')
-    expect(expanded).toContain('Help! My payouts have been failing')
-    expect(expanded).toContain('"is_urgent"')
-    expect(expanded).toContain('\n  ')
+    for (const expanded of [false, true]) {
+      const output = rendered(tool.renderCall(params, theme, { expanded }))
+      expect(output).toContain('ask_jev')
+      expect(output).toContain('is_urgent')
+      expect(output).not.toContain('Help! My payouts have been failing')
+    }
+    expect(seenColors).toContain('success')
   })
 
   it('hides the response when collapsed and shows it pretty-printed when expanded', () => {
@@ -61,6 +69,9 @@ describe('ask_jev rendering', () => {
     expect(expanded).toContain('Response:')
     expect(expanded).toContain('gen-1')
     expect(expanded).toContain('\n  ')
+    expect(expanded).not.toContain('Help! My payouts have been failing')
+    expect(seenColors).toContain('border')
+    expect(seenColors.every(color => !color.startsWith('#'))).toBe(true)
   })
 
   it('returns pretty-printed tool content from execute', async () => {

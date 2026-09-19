@@ -3131,18 +3131,15 @@ function pieJevExtension(pi) {
 		async execute(_toolCallId, params, signal) {
 			return toolResult(await askJev(params.state, params.questions, { signal }));
 		},
-		renderCall(args, theme, context) {
-			if (!context.expanded) return new Text("", 0, 0);
-			return new Text(`\n${theme.fg("accent", "Prompt:")}\n${theme.fg("toolOutput", prettyPrint({
-				state: args.state,
-				questions: args.questions
-			}))}`, 0, 0);
+		renderCall(args, theme) {
+			const names = Object.keys(args.questions).join(", ");
+			return new Text(`${theme.fg("success", theme.bold("ask_jev"))}${theme.fg("muted", ` · ${names}`)}`, 0, 0);
 		},
 		renderResult(result, options, theme) {
 			if (!options.expanded) return new Text("", 0, 0);
 			const details = result.details;
 			const body = details !== void 0 && typeof details === "object" ? prettyPrint(details) : String(result.content.find((item) => item.type === "text")?.text ?? "");
-			return new Text(`\n${theme.fg("accent", "Response:")}\n${theme.fg("toolOutput", body)}`, 0, 0);
+			return new Text(`\n${theme.fg("border", "Response:")}\n${theme.fg("border", body)}`, 0, 0);
 		}
 	});
 }

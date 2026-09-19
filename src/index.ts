@@ -47,15 +47,9 @@ export default function pieJevExtension(pi: ExtensionAPI): void {
       const response = await askJev(params.state, params.questions, { signal })
       return toolResult(response)
     },
-    renderCall(args, theme, context) {
-      if (!context.expanded) {
-        return new Text('', 0, 0)
-      }
-      return new Text(
-        `\n${theme.fg('accent', 'Prompt:')}\n${theme.fg('toolOutput', prettyPrint({ state: args.state, questions: args.questions }))}`,
-        0,
-        0,
-      )
+    renderCall(args, theme) {
+      const names = Object.keys(args.questions).join(', ')
+      return new Text(`${theme.fg('success', theme.bold('ask_jev'))}${theme.fg('muted', ` · ${names}`)}`, 0, 0)
     },
     renderResult(result, options, theme) {
       if (!options.expanded) {
@@ -68,7 +62,7 @@ export default function pieJevExtension(pi: ExtensionAPI): void {
           : String(
               (result.content as Array<{ type: string; text?: string }>).find(item => item.type === 'text')?.text ?? '',
             )
-      return new Text(`\n${theme.fg('accent', 'Response:')}\n${theme.fg('toolOutput', body)}`, 0, 0)
+      return new Text(`\n${theme.fg('border', 'Response:')}\n${theme.fg('border', body)}`, 0, 0)
     },
   })
 }
